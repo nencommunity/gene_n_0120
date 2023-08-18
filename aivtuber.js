@@ -18,6 +18,9 @@ const INTERVAL_MILL_SECONDS_HANDLING_COMMENTS = 3000;
 // VOICEVOXのSpeakerID
 const VOICEVOX_SPEAKER_ID = '10';
 
+// 最新何件のコメントを処理対象にするか
+const NUM_OF_COMMENTS_TO_BE_HANDLED = 3;
+
 var audio = new Audio();
 // 処理するコメントのキュー
 var liveCommentQueues = [];
@@ -222,6 +225,10 @@ const getNextComment = () => {
     let nextComment = ""
     let nextRaw = ""
     for (let index in liveCommentQueues) {
+        // 指定数のコメントを処理対象にする
+        if ((liveCommentQueues.length - NUM_OF_COMMENTS_TO_BE_HANDLED) >= index) {
+            continue;
+        }
         if (!responsedLiveComments.includes(liveCommentQueues[index])) {
             const arr = liveCommentQueues[index].split(":::")
             if (arr.length > 1) {
@@ -254,6 +261,9 @@ const handleNewLiveCommentIfNeeded = async () => {
     }
 
     for (let index in liveCommentQueues) {
+        if ((liveCommentQueues.length - 3) >= index) {
+            continue;
+        }
         if (!responsedLiveComments.includes(liveCommentQueues[index])) {
             const arr = liveCommentQueues[index].split(":::")
             if (arr.length > 1) {
@@ -294,14 +304,19 @@ const img = ["chara.png", "chara_blinking.png"];
 var isBlinking = false;
 
 function blink() {
-    if (isBlinking) {
-        isBlinking = false;
+    if (isThinking || audio.paused) {
         document.getElementById("charaImg").src = img[1];
-        setTimeout(blink, 100);
+        setTimeout(blink, 1000);
     } else {
-        isBlinking = true;
-        document.getElementById("charaImg").src = img[0];
-        setTimeout(blink, 3500);
+        if (isBlinking) {
+            isBlinking = false;
+            document.getElementById("charaImg").src = img[1];
+            setTimeout(blink, 100);
+        } else {
+            isBlinking = true;
+            document.getElementById("charaImg").src = img[0];
+            setTimeout(blink, 3500);
+        }
     }
 }
 
