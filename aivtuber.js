@@ -225,10 +225,6 @@ const getNextComment = () => {
     let nextComment = ""
     let nextRaw = ""
     for (let index in liveCommentQueues) {
-        // 指定数のコメントを処理対象にする
-        if ((liveCommentQueues.length - NUM_OF_COMMENTS_TO_BE_HANDLED) >= index) {
-            continue;
-        }
         if (!responsedLiveComments.includes(liveCommentQueues[index])) {
             const arr = liveCommentQueues[index].split(":::")
             if (arr.length > 1) {
@@ -261,7 +257,8 @@ const handleNewLiveCommentIfNeeded = async () => {
     }
 
     for (let index in liveCommentQueues) {
-        if ((liveCommentQueues.length - 3) >= index) {
+	// 指定数のコメントを処理対象にする
+        if ((liveCommentQueues.length - NUM_OF_COMMENTS_TO_BE_HANDLED) >= index) {
             continue;
         }
         if (!responsedLiveComments.includes(liveCommentQueues[index])) {
