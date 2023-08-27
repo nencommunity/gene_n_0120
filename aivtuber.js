@@ -1,25 +1,3 @@
-//TODO: meboの定数
-const MEBO_API_KEY = "<meboのAPIキーを入力してください。>";
-const MEBO_AGENT_ID = "<meboのAgent IDを入力してください。>";
-
-// TODO: VOICEVOXのURL (デフォルトの設定の場合は変える必要なし)
-const VOICE_VOX_API_URL = "http://localhost:50021";
-
-// TODO: ライブ配信するYouTubeのVideoID
-const YOUTUBE_VIDEO_ID = '<YouTube Video IDを入力してください。>';
-// TODO: YouTube Data APIを利用可能なAPIKEY
-const YOUTUBE_DATA_API_KEY = '<YouTube Data APIのAPIキーを入力してください。>';
-
-// コメントの取得インターバル (ms)
-const INTERVAL_MILL_SECONDS_RETRIEVING_COMMENTS = 10000;
-// QUEUEに積まれたコメントを捌くインターバル (ms)
-const INTERVAL_MILL_SECONDS_HANDLING_COMMENTS = 3000;
-
-// VOICEVOXのSpeakerID
-const VOICEVOX_SPEAKER_ID = '10';
-
-// 最新何件のコメントを処理対象にするか
-const NUM_OF_COMMENTS_TO_BE_HANDLED = 3;
 
 var audio = new Audio();
 // 処理するコメントのキュー
@@ -30,12 +8,16 @@ var responsedLiveComments = [];
 var isThinking = false;
 // ライブごとに設定する識別子
 var LIVE_OWNER_ID = createUuid();
-// NGワードの配列
-var ngwords = []
 // YouTube LIVEのコメント取得のページング
 var nextPageToken = "";
 // コメントの取得が開始されているかどうかのフラグ
 var isLiveCommentsRetrieveStarted = true;
+
+// role:systemのmessage読み込み
+var OPENAI_MESSAGE_ROLE_SYSTEM = ""; // role:system message
+var reader = new FileReader();
+reader.onload = function () { OPENAI_MESSAGE_ROLE_SYSTEM = reader.result; };
+reader.readAsText("./data/role_system.txt") ;
 
 const getLiveChatId = async () => {
     const response = await fetch('https://youtube.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=' + YOUTUBE_VIDEO_ID + '&key=' + YOUTUBE_DATA_API_KEY, {
@@ -77,6 +59,7 @@ const startTyping = (param) => {
 
 async function getMeboResponse(utterance, username, uid, apikey, agentId) {
     var requestBody = {
+        'model': 'text-davinci-003',
         'api_key': apikey,
         'agent_id': agentId,
         'utterance': utterance,
@@ -92,6 +75,32 @@ async function getMeboResponse(utterance, username, uid, apikey, agentId) {
     })
     const content = await response.json();
     return content.bestResponse.utterance;
+}
+
+async function getOpenAIResponse(utterance, username, apikey) {
+    var requestBody = {
+        'model': OPENAI_MODEL,
+        'messages' : [
+            { role:"system", content: OPENAI_MESSAGE_ROLE_SYSTEM },
+            { role:"user", content: utterance }
+        ],
+        "max_tokens": OPENAI_MAX_TOKENS,
+		"temperature": OPENAI_TEMPERATURE,
+		"top_p": OPENAI_TOP_P,
+		"frequency_penalty": OPENAI_FREQUENCY_PENALTY,
+		"presence_penalty": OPENAI_PRESENCE_PENALTY
+    };
+    const response = await fetch('https://api.openai.com/v1/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+			Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(requestBody)
+    });
+    const content = await response.json();
+    
+    // to be implemented
 }
 
 const playVoice = async (inputText) => {
@@ -192,7 +201,7 @@ const retrieveYouTubeLiveComments = (activeLiveChatId) => {
                         const additionalComment = username + ":::" + message;
                         if (!liveCommentQueues.includes(additionalComment) && message != "") {
                             let isNg = false
-                            ngwords.forEach(
+                            NGWORDS.forEach(
                                 (ngWord) => {
                                     if (additionalComment.includes(ngWord)) {
                                         isNg = true
